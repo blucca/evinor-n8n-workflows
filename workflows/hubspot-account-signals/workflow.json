@@ -1,0 +1,560 @@
+{
+  "name": "Evinor → HubSpot: funding, leadership changes and layoffs on target accounts",
+  "nodes": [
+    {
+      "parameters": {
+        "sensor": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "simplify": false
+      },
+      "id": "a386530c-6b51-4451-9b1a-4f1718fd7cb7",
+      "name": "Funding ≥ $10M (Evinor)",
+      "type": "@evinor/n8n-nodes-evinor.evinorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sensor": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "simplify": false
+      },
+      "id": "da89e79f-e80b-4050-a030-ac3b81222ea8",
+      "name": "Leadership change (Evinor)",
+      "type": "@evinor/n8n-nodes-evinor.evinorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "sensor": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "simplify": false
+      },
+      "id": "91cc227c-d9b5-4192-821e-9314f4c8d345",
+      "name": "Layoff (Evinor)",
+      "type": "@evinor/n8n-nodes-evinor.evinorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Flattens one Evinor delivery into the fields the rest of the workflow uses,\n// and adds it to the daily digest buffer.\n// Payload reference: https://github.com/evinor-ai/n8n-nodes-evinor\nconst SUBJECT_ROLE = {\n  FUND_RAISING: 'COMPANY_RAISING_FUNDS',\n  LEADERSHIP_CHANGE: 'COMPANY_NAME',\n  LAYOFF: 'COMPANY_NAME',\n};\n\nconst store = $getWorkflowStaticData('global');\nstore.digest = store.digest ?? [];\n\nconst out = [];\nfor (const item of $input.all()) {\n  const e = item.json;\n  const d = e.details ?? {};\n  const roles = Array.isArray(d.roles) ? d.roles : [];\n  const first = (code) => roles.find((r) => r.code === code);\n  const every = (code) => roles.filter((r) => r.code === code).map((r) => r.textValue);\n\n  const eventType = e.eventCodeName ?? d.templateCodeName ?? '';\n  const subject = first(SUBJECT_ROLE[eventType] ?? 'COMPANY_NAME');\n  const amount = first('AMOUNT_RAISED');\n\n  // Respect the date's precision: a MONTH (or null) precision date has no real day.\n  let eventDate = '';\n  if (e.eventDate?.value) {\n    eventDate = e.eventDate.precision === 'DAY'\n      ? e.eventDate.value.slice(0, 10)\n      : e.eventDate.value.slice(0, 7);\n    if (e.eventDate.source === 'ESTIMATED') eventDate += ' (estimated)';\n  }\n\n  const band = d.confidence?.band ?? 'UNKNOWN';\n  const company = subject?.textValue ?? '';\n  const outlets = (d.reportingOutlets ?? []).map((o) => o.name).filter(Boolean).join(', ');\n\n  let reviewReason = '';\n  if (!company) reviewReason = 'No company on the event';\n  else if (band !== 'HIGH') reviewReason = `Confidence is ${band}`;\n\n  const ev = {\n    eventId: e.externalEventId ?? d.incidentId ?? '',\n    eventType,\n    sentence: d.generatedSentence ?? d.summaryText ?? '',\n    band,\n    company,\n    entityId: subject?.namedEntityId ?? '',\n    amount: amount?.parsedAmount ?? '',\n    amountUnit: amount?.parsedAmountUnit ?? '',\n    roundType: first('FUNDING_ROUND_TYPE')?.textValue ?? '',\n    investors: every('INVESTING_COMPANY_NAME').join(', '),\n    roleTitle: first('ROLE_TITLE')?.textValue ?? '',\n    incomingPerson: first('INCOMING_PERSON')?.textValue ?? '',\n    outgoingPerson: first('OUTGOING_PERSON')?.textValue ?? '',\n    affectedEmployees: first('AFFECTED_EMPLOYEES_COUNT')?.textValue ?? '',\n    eventDate,\n    outlets,\n    reportCount: d.matchingReportCount ?? 0,\n    sourceKind: d.triggeringReport?.sourceKind ?? '',\n    isTest: e.isTest === true,\n    autoRoute: reviewReason === '',\n    reviewReason,\n  };\n\n  if (!ev.isTest) {\n    store.digest.push({ eventType: ev.eventType, sentence: ev.sentence, band: ev.band, outlets: ev.outlets });\n    store.digest = store.digest.slice(-500);\n  }\n  out.push({ json: ev });\n}\nreturn out;\n"
+      },
+      "id": "95376745-3546-4bf0-9ffe-c237105d0850",
+      "name": "Normalize event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d60fc8df-302d-4eeb-8e63-89b826b0380f",
+              "leftValue": "={{ $json.autoRoute }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6e9f4489-5ff0-452c-99f5-da72b6f415ef",
+      "name": "HIGH confidence + company?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        500,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "options": {},
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/companies/search",
+        "jsonBody": "={{ JSON.stringify({\n  filterGroups: [\n    { filters: [{ propertyName: 'evinor_entity_id', operator: 'EQ', value: $json.entityId || 'none' }] },\n    { filters: [{ propertyName: 'name', operator: 'EQ', value: $json.company }] }\n  ],\n  properties: ['name', 'domain', 'hubspot_owner_id', 'evinor_entity_id'],\n  limit: 10\n}) }}"
+      },
+      "id": "175f8320-2d11-4e7c-ad29-836662c669a0",
+      "name": "Find HubSpot company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Picks the CRM company. An exact evinor_entity_id match wins; otherwise a\n// single exact-name match is accepted. Anything ambiguous goes to a person.\nconst ev = $('Normalize event').item.json;\nconst results = $json.results ?? [];\nconst byId = ev.entityId\n  ? results.filter((c) => c.properties?.evinor_entity_id === ev.entityId)\n  : [];\nconst candidates = byId.length > 0 ? byId : results;\nconst company = candidates.length === 1 ? candidates[0] : null;\n\nlet route;\nlet reviewReason = '';\nif (!company) {\n  route = 'review';\n  reviewReason = candidates.length === 0\n    ? `No HubSpot company matched \"${ev.company}\"`\n    : `${candidates.length} HubSpot companies are named \"${ev.company}\". Set evinor_entity_id = ${ev.entityId || '(none on event)'} on the right one`;\n} else if (!company.properties?.hubspot_owner_id) {\n  route = 'lead';\n} else if (ev.eventType === 'LAYOFF') {\n  route = 'review';\n  reviewReason = 'Layoff at an owned account: a person decides the tone';\n} else {\n  route = 'task';\n}\n\nconst details = [\n  ev.amount !== '' ? `Amount: ${ev.amount} ${ev.amountUnit}`.trim() : '',\n  ev.roundType ? `Round: ${ev.roundType}` : '',\n  ev.investors ? `Investors: ${ev.investors}` : '',\n  ev.incomingPerson ? `Incoming: ${ev.incomingPerson}` : '',\n  ev.outgoingPerson ? `Outgoing: ${ev.outgoingPerson}` : '',\n  ev.roleTitle ? `Role: ${ev.roleTitle}` : '',\n  ev.eventDate ? `Event date: ${ev.eventDate}` : '',\n  `Reported by: ${ev.outlets || 'unnamed outlets'} (${ev.reportCount} reports)`,\n  `Evinor event: ${ev.eventId}`,\n].filter(Boolean);\n\nreturn {\n  json: {\n    ...ev,\n    route,\n    reviewReason,\n    hubspotCompanyId: company?.id ?? '',\n    ownerId: company?.properties?.hubspot_owner_id ?? '',\n    matchedBy: byId.length > 0 ? 'evinor_entity_id' : 'name',\n    noteHtml: `<p><strong>${ev.sentence}</strong></p><p>${details.join('<br>')}</p>`,\n    taskSubject: `${ev.eventType === 'FUND_RAISING' ? 'Funding' : 'Leadership change'}: ${ev.company}`,\n    taskBody: `${ev.sentence}\\n${details.join('\\n')}`,\n  },\n};\n"
+      },
+      "id": "aedca96f-e53d-4e8f-b5ba-6f775b2464b2",
+      "name": "Resolve CRM match",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "task",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e473cd64-4e0a-469e-9f5c-7e740fc3bad0"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "task"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "lead",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "811493df-cc79-4cef-8d5f-0e68a2594dd7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lead"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "322c2ef0-1e13-45b2-bde8-7cf2f5954975"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "review"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9028be97-b01c-4dc5-bb21-3f3a2a3bd8b7",
+      "name": "Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1240,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "options": {},
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/notes",
+        "jsonBody": "={{ JSON.stringify({\n  properties: { hs_timestamp: new Date().toISOString(), hs_note_body: $json.noteHtml },\n  associations: [{ to: { id: $json.hubspotCompanyId },\n    types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 190 }] }]\n}) }}"
+      },
+      "id": "a25300ab-206d-4c5b-b1e5-c5d4e32a5a25",
+      "name": "Add timeline note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1500,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "options": {},
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/tasks",
+        "jsonBody": "={{ JSON.stringify({\n  properties: {\n    hs_timestamp: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString(),\n    hs_task_subject: $('Resolve CRM match').item.json.taskSubject,\n    hs_task_body: $('Resolve CRM match').item.json.taskBody,\n    hs_task_status: 'NOT_STARTED',\n    hs_task_priority: 'MEDIUM',\n    hubspot_owner_id: $('Resolve CRM match').item.json.ownerId\n  },\n  associations: [{ to: { id: $('Resolve CRM match').item.json.hubspotCompanyId },\n    types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 192 }] }]\n}) }}"
+      },
+      "id": "4a6cb0f4-e94f-414c-bf64-c54e24515ab4",
+      "name": "Task the owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// One row per lead. eventDate already respects the date's precision.\nreturn $input.all().map(({ json: e }) => ({\n  json: {\n    'Added': new Date().toISOString().slice(0, 10),\n    'Company': e.company,\n    'Event': e.eventType,\n    'Event date': e.eventDate,\n    'Amount': e.amount,\n    'Unit': e.amountUnit,\n    'Round': e.roundType,\n    'Investors': e.investors,\n    'Summary': e.sentence,\n    'Outlets': e.outlets,\n    'Confidence': e.band,\n    'HubSpot company id': e.hubspotCompanyId,\n    'Evinor event id': e.eventId,\n  },\n}));\n"
+      },
+      "id": "c1a955d6-9193-4631-80d5-83c343e18062",
+      "name": "Shape lead row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "7fed402c-08ac-4f39-b2da-4bb1f026dc1d",
+      "name": "Append lead to sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1740,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#evinor-review"
+        },
+        "text": "=*Needs a person* ({{ $json.band }}){{ $json.isTest ? ' [test delivery]' : '' }}\n{{ $json.sentence }}\n*Why:* {{ $json.reviewReason }}\n*Outlets:* {{ $json.outlets || 'unnamed' }} · {{ $json.reportCount }} reports · source: {{ $json.sourceKind || 'n/a' }}\n_Evinor event {{ $json.eventId }}_",
+        "otherOptions": {}
+      },
+      "id": "30be5482-bb6d-415b-95bd-e8d9f78d3b4d",
+      "name": "Post to review channel",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1500,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "a0cb0b59-36ed-48d8-b58e-c53d6193037b",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builds one message from everything buffered by \"Normalize event\" since the\n// last digest, then clears the buffer. Static data only persists for an\n// active workflow (production runs), not for manual test runs.\nconst store = $getWorkflowStaticData('global');\nconst events = store.digest ?? [];\nstore.digest = [];\nif (events.length === 0) return [];\n\nconst shown = events.slice(0, 40);\nconst lines = shown.map((e) => `• *${e.eventType}* ${e.sentence} _(${e.band}; ${e.outlets || 'unnamed outlets'})_`);\nif (events.length > shown.length) lines.push(`…and ${events.length - shown.length} more`);\nreturn [{ json: { text: `*Evinor: ${events.length} event(s) since the last digest*\\n${lines.join('\\n')}` } }];\n"
+      },
+      "id": "b5f2729e-dc23-41ea-a317-e804a216d6c1",
+      "name": "Build digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#account-signals"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "97598cad-57d4-44fe-9146-85cf654e37cf",
+      "name": "Post daily digest",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        500,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Evinor → HubSpot account signals\n\n**Setup (about 10 minutes)**\n1. Install the community node `@evinor/n8n-nodes-evinor` and add an *Evinor API* credential (key with SENSORS_READ + SENSORS_WRITE).\n2. In Evinor, create three sensors on your target-account watchlist:\n   - FUND_RAISING, `AMOUNT_RAISED` ≥ 10M USD, min 2 reports\n   - LEADERSHIP_CHANGE, min 2 reports\n   - LAYOFF, min 1 report\n3. Pick each sensor in its trigger node.\n4. HubSpot: add a *HubSpot App Token* credential (private app with companies, notes, tasks scopes) to the three HTTP nodes. Create a single-line text **company** property `evinor_entity_id`.\n5. Pick your Google Sheet and Slack channels, then activate.\n\n**Matching:** Evinor sends a resolved entity id, not a company domain. An `evinor_entity_id` match wins; otherwise one exact-name match is accepted; anything else goes to the review channel with the id to paste into HubSpot, so the next event matches exactly.\n",
+        "height": 380,
+        "width": 620
+      },
+      "id": "0ef423a2-9ae8-42c0-ad3a-a369c101d00c",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -420
+      ]
+    }
+  ],
+  "connections": {
+    "Funding ≥ $10M (Evinor)": {
+      "main": [
+        [
+          {
+            "node": "Normalize event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leadership change (Evinor)": {
+      "main": [
+        [
+          {
+            "node": "Normalize event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Layoff (Evinor)": {
+      "main": [
+        [
+          {
+            "node": "Normalize event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize event": {
+      "main": [
+        [
+          {
+            "node": "HIGH confidence + company?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HIGH confidence + company?": {
+      "main": [
+        [
+          {
+            "node": "Find HubSpot company",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post to review channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find HubSpot company": {
+      "main": [
+        [
+          {
+            "node": "Resolve CRM match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve CRM match": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Add timeline note",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Shape lead row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post to review channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add timeline note": {
+      "main": [
+        [
+          {
+            "node": "Task the owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape lead row": {
+      "main": [
+        [
+          {
+            "node": "Append lead to sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Build digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build digest": {
+      "main": [
+        [
+          {
+            "node": "Post daily digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
