@@ -1,0 +1,214 @@
+{
+  "id": "9961a5b1b4374893",
+  "name": "n8n-check: Evinor missing-ID original: expect review, no company or owner",
+  "active": false,
+  "nodes": [
+    {
+      "id": "f2c83f84-1015-4f62-92e7-7f25b9d0f11f",
+      "name": "n8n-check start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "evinor-review-fixture-original",
+      "name": "Missing-ID Evinor event",
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return JSON.parse(\"[{\\\"eventCodeName\\\":\\\"FUND_RAISING\\\",\\\"externalEventId\\\":\\\"match-missing-entity\\\",\\\"details\\\":{\\\"roles\\\":[{\\\"code\\\":\\\"COMPANY_RAISING_FUNDS\\\",\\\"textValue\\\":\\\"Acme\\\"}],\\\"confidence\\\":{\\\"band\\\":\\\"HIGH\\\"},\\\"generatedSentence\\\":\\\"Acme raised $12 million.\\\",\\\"reportingOutlets\\\":[],\\\"matchingReportCount\\\":2}}]\").map(json => ({json}));"
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Flattens one Evinor delivery into the fields the rest of the workflow uses,\n// and adds it to the daily digest buffer.\n// Payload reference: https://github.com/evinor-ai/n8n-nodes-evinor\nconst SUBJECT_ROLE = {\n  FUND_RAISING: 'COMPANY_RAISING_FUNDS',\n  LEADERSHIP_CHANGE: 'COMPANY_NAME',\n  LAYOFF: 'COMPANY_NAME',\n};\n\nconst store = $getWorkflowStaticData('global');\nstore.digest = store.digest ?? [];\n\nconst out = [];\nfor (const item of $input.all()) {\n  const e = item.json;\n  const d = e.details ?? {};\n  const roles = Array.isArray(d.roles) ? d.roles : [];\n  const first = (code) => roles.find((r) => r.code === code);\n  const every = (code) => roles.filter((r) => r.code === code).map((r) => r.textValue);\n\n  const eventType = e.eventCodeName ?? d.templateCodeName ?? '';\n  const subject = first(SUBJECT_ROLE[eventType] ?? 'COMPANY_NAME');\n  const amount = first('AMOUNT_RAISED');\n\n  // Respect the date's precision: a MONTH (or null) precision date has no real day.\n  let eventDate = '';\n  if (e.eventDate?.value) {\n    eventDate = e.eventDate.precision === 'DAY'\n      ? e.eventDate.value.slice(0, 10)\n      : e.eventDate.value.slice(0, 7);\n    if (e.eventDate.source === 'ESTIMATED') eventDate += ' (estimated)';\n  }\n\n  const band = d.confidence?.band ?? 'UNKNOWN';\n  const company = subject?.textValue ?? '';\n  const outlets = (d.reportingOutlets ?? []).map((o) => o.name).filter(Boolean).join(', ');\n\n  let reviewReason = '';\n  if (!company) reviewReason = 'No company on the event';\n  else if (band !== 'HIGH') reviewReason = `Confidence is ${band}`;\n\n  const ev = {\n    eventId: e.externalEventId ?? d.incidentId ?? '',\n    eventType,\n    sentence: d.generatedSentence ?? d.summaryText ?? '',\n    band,\n    company,\n    entityId: subject?.namedEntityId ?? '',\n    amount: amount?.parsedAmount ?? '',\n    amountUnit: amount?.parsedAmountUnit ?? '',\n    roundType: first('FUNDING_ROUND_TYPE')?.textValue ?? '',\n    investors: every('INVESTING_COMPANY_NAME').join(', '),\n    roleTitle: first('ROLE_TITLE')?.textValue ?? '',\n    incomingPerson: first('INCOMING_PERSON')?.textValue ?? '',\n    outgoingPerson: first('OUTGOING_PERSON')?.textValue ?? '',\n    affectedEmployees: first('AFFECTED_EMPLOYEES_COUNT')?.textValue ?? '',\n    eventDate,\n    outlets,\n    reportCount: d.matchingReportCount ?? 0,\n    sourceKind: d.triggeringReport?.sourceKind ?? '',\n    isTest: e.isTest === true,\n    autoRoute: reviewReason === '',\n    reviewReason,\n  };\n\n  if (!ev.isTest) {\n    store.digest.push({ eventType: ev.eventType, sentence: ev.sentence, band: ev.band, outlets: ev.outlets });\n    store.digest = store.digest.slice(-500);\n  }\n  out.push({ json: ev });\n}\nreturn out;\n"
+      },
+      "id": "95376745-3546-4bf0-9ffe-c237105d0850",
+      "name": "Normalize event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d60fc8df-302d-4eeb-8e63-89b826b0380f",
+              "leftValue": "={{ $json.autoRoute }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6e9f4489-5ff0-452c-99f5-da72b6f415ef",
+      "name": "HIGH confidence + company?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Review-only boundary: the HTTP API is mocked in Code; no network is used.\n// Request expression is from the respective Evinor workflow export, verbatim.\nconst requestBody = JSON.parse( JSON.stringify({\n  filterGroups: [\n    { filters: [{ propertyName: 'evinor_entity_id', operator: 'EQ', value: $json.entityId || 'none' }] },\n    { filters: [{ propertyName: 'name', operator: 'EQ', value: $json.company }] }\n  ],\n  properties: ['name', 'domain', 'hubspot_owner_id', 'evinor_entity_id'],\n  limit: 10\n}) );\nconst companies = JSON.parse(\"[{\\\"id\\\":\\\"foreign-company\\\",\\\"properties\\\":{\\\"name\\\":\\\"Other Company\\\",\\\"evinor_entity_id\\\":\\\"none\\\",\\\"hubspot_owner_id\\\":\\\"foreign-owner\\\",\\\"domain\\\":\\\"foreign-company.example\\\"}}]\");\nconst matched = companies.filter(company => requestBody.filterGroups.some(group =>\n  group.filters.every(filter => {\n    if (filter.operator !== 'EQ') throw new Error('Review fixture supports the source EQ filters only');\n    return company.properties?.[filter.propertyName] === filter.value;\n  })\n));\nreturn { json: { total: matched.length, results: matched.slice(0, requestBody.limit) } };\n"
+      },
+      "id": "175f8320-2d11-4e7c-ad29-836662c669a0",
+      "name": "Find HubSpot company",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Picks the CRM company. An exact evinor_entity_id match wins; otherwise a\n// single exact-name match is accepted. Anything ambiguous goes to a person.\nconst ev = $('Normalize event').item.json;\nconst results = $json.results ?? [];\nconst byId = ev.entityId\n  ? results.filter((c) => c.properties?.evinor_entity_id === ev.entityId)\n  : [];\nconst candidates = byId.length > 0 ? byId : results;\nconst company = candidates.length === 1 ? candidates[0] : null;\n\nlet route;\nlet reviewReason = '';\nif (!company) {\n  route = 'review';\n  reviewReason = candidates.length === 0\n    ? `No HubSpot company matched \"${ev.company}\"`\n    : `${candidates.length} HubSpot companies are named \"${ev.company}\". Set evinor_entity_id = ${ev.entityId || '(none on event)'} on the right one`;\n} else if (!company.properties?.hubspot_owner_id) {\n  route = 'lead';\n} else if (ev.eventType === 'LAYOFF') {\n  route = 'review';\n  reviewReason = 'Layoff at an owned account: a person decides the tone';\n} else {\n  route = 'task';\n}\n\nconst details = [\n  ev.amount !== '' ? `Amount: ${ev.amount} ${ev.amountUnit}`.trim() : '',\n  ev.roundType ? `Round: ${ev.roundType}` : '',\n  ev.investors ? `Investors: ${ev.investors}` : '',\n  ev.incomingPerson ? `Incoming: ${ev.incomingPerson}` : '',\n  ev.outgoingPerson ? `Outgoing: ${ev.outgoingPerson}` : '',\n  ev.roleTitle ? `Role: ${ev.roleTitle}` : '',\n  ev.eventDate ? `Event date: ${ev.eventDate}` : '',\n  `Reported by: ${ev.outlets || 'unnamed outlets'} (${ev.reportCount} reports)`,\n  `Evinor event: ${ev.eventId}`,\n].filter(Boolean);\n\nreturn {\n  json: {\n    ...ev,\n    route,\n    reviewReason,\n    hubspotCompanyId: company?.id ?? '',\n    ownerId: company?.properties?.hubspot_owner_id ?? '',\n    matchedBy: byId.length > 0 ? 'evinor_entity_id' : 'name',\n    noteHtml: `<p><strong>${ev.sentence}</strong></p><p>${details.join('<br>')}</p>`,\n    taskSubject: `${ev.eventType === 'FUND_RAISING' ? 'Funding' : 'Leadership change'}: ${ev.company}`,\n    taskBody: `${ev.sentence}\\n${details.join('\\n')}`,\n  },\n};\n"
+      },
+      "id": "aedca96f-e53d-4e8f-b5ba-6f775b2464b2",
+      "name": "Resolve CRM match",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "id": "evinor-review-projection-original",
+      "name": "Stable route output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { route: $json.route, companyId: $json.hubspotCompanyId, ownerId: $json.ownerId } };"
+      }
+    },
+    {
+      "id": "168a8554-e35d-40ba-a073-7a6e127fe231",
+      "name": "Check expected output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        240
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Generated by n8n-check. Fixed fixture, one run per node; leave this branch last.\nfunction equalJson(a, b) {\n  if (Object.is(a, b)) return true;\n  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;\n  if (Array.isArray(a) !== Array.isArray(b)) return false;\n  const keys = Object.keys(a);\n  return keys.length === Object.keys(b).length &&\n    keys.every(key => Object.hasOwn(b, key) && equalJson(a[key], b[key]));\n}\nfunction checkItems(items, assertion) {\n  const label = `${assertion.node}: output ${assertion.output ?? 0}`;\n  if (assertion.count !== undefined && items.length !== assertion.count)\n    throw new Error(`n8n-check: ${label} expected ${assertion.count} items, got ${items.length}`);\n  if (assertion.equals !== undefined) {\n    const values = items.map((item, index) => {\n      if (!assertion.pluck) return item.json;\n      let value = item;\n      for (const key of assertion.pluck.split('.')) {\n        if (value === null || typeof value !== 'object' || !Object.hasOwn(value, key))\n          throw new Error(`n8n-check: ${label} item ${index} is missing ${assertion.pluck}`);\n        value = value[key];\n      }\n      return value;\n    });\n    if (!equalJson(values, assertion.equals))\n      throw new Error(`n8n-check: ${label}${assertion.pluck ? ` ${assertion.pluck}` : ''} differs. Expected ${JSON.stringify(assertion.equals)}; got ${JSON.stringify(values)}`);\n  }\n  return { node: assertion.node, output: assertion.output ?? 0, count: items.length, passed: true };\n}\nconst assertions = JSON.parse(\"[{\\\"node\\\":\\\"Stable route output\\\",\\\"count\\\":1,\\\"equals\\\":[{\\\"route\\\":\\\"review\\\",\\\"companyId\\\":\\\"\\\",\\\"ownerId\\\":\\\"\\\"}]}]\");\nconst checks = assertions.map(assertion => {\n  const node = $(assertion.node);\n  const items = node.isExecuted ? node.all(assertion.output ?? 0, 0) : [];\n  return checkItems(items, assertion);\n});\nreturn [{ json: { status: 'passed', checks } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Missing-ID Evinor event": {
+      "main": [
+        [
+          {
+            "node": "Normalize event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize event": {
+      "main": [
+        [
+          {
+            "node": "HIGH confidence + company?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HIGH confidence + company?": {
+      "main": [
+        [
+          {
+            "node": "Find HubSpot company",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Find HubSpot company": {
+      "main": [
+        [
+          {
+            "node": "Resolve CRM match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve CRM match": {
+      "main": [
+        [
+          {
+            "node": "Stable route output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n-check start": {
+      "main": [
+        [
+          {
+            "node": "Missing-ID Evinor event",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check expected output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 60,
+    "saveExecutionProgress": true
+  }
+}

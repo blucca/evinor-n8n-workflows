@@ -1,0 +1,2160 @@
+{
+  "source": {
+    "repository": "evinor-ai/evinor-n8n-workflows",
+    "commit": "1aa36b944ff362590f8cbb0a49caeaaf6b6c75c0",
+    "license": "MIT"
+  },
+  "environment": {
+    "n8n": "2.46.6",
+    "node": "24.21.0"
+  },
+  "classification": {
+    "http_native": "Original business Code/IF/Switch and HTTP nodes in native n8n; external services replaced by localhost fixtures. Search response calculated from actual OR/EQ/limit request. Note/task bodies recorded. No live service accounts used.",
+    "editor_native": "The two exact editor JSON files imported and executed in native n8n; search API mocked in Code. One fixed synthetic event, no network or credentials."
+  },
+  "http_summary": {
+    "nativeRunCount": 12,
+    "nativeSuccessCount": 12,
+    "baselineContractPass": 5,
+    "fixedContractPass": 6,
+    "unchangedFiveCaseOutputs": true
+  },
+  "http_cases": [
+    {
+      "variant": "baseline",
+      "name": "ID match wins over same-name other company",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "task",
+        "companyId": "id-owned",
+        "ownerId": "id-owner",
+        "matchedBy": "evinor_entity_id"
+      },
+      "actual": {
+        "route": "task",
+        "companyId": "id-owned",
+        "ownerId": "id-owner",
+        "matchedBy": "evinor_entity_id"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "entity-acme"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 2,
+        "results": [
+          {
+            "id": "name-only",
+            "properties": {
+              "name": "Acme",
+              "domain": "name-only.example",
+              "hubspot_owner_id": "owner-17",
+              "evinor_entity_id": "different-entity"
+            }
+          },
+          {
+            "id": "id-owned",
+            "properties": {
+              "name": "Acme Holdings",
+              "domain": "id-owned.example",
+              "hubspot_owner_id": "id-owner",
+              "evinor_entity_id": "entity-acme"
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 2,
+      "switchOutput": [
+        1,
+        0,
+        0
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Add timeline note",
+        "Task the owner"
+      ],
+      "taskPairedItem": {
+        "item": 0
+      },
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/baseline/0/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "entity-acme"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 2,
+            "results": [
+              {
+                "id": "name-only",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "name-only.example",
+                  "hubspot_owner_id": "owner-17",
+                  "evinor_entity_id": "different-entity"
+                }
+              },
+              {
+                "id": "id-owned",
+                "properties": {
+                  "name": "Acme Holdings",
+                  "domain": "id-owned.example",
+                  "hubspot_owner_id": "id-owner",
+                  "evinor_entity_id": "entity-acme"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/0/crm/v3/objects/notes",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:32:25.915Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-id</p>"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "id-owned"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 190
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "note-baseline-0",
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:32:25.915Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-id</p>"
+            },
+            "createdAt": "2026-11-18T04:32:25.918Z",
+            "updatedAt": "2026-11-18T04:32:25.918Z",
+            "archived": false
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/0/crm/v3/objects/tasks",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:32:25.935Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-id",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "id-owner"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "id-owned"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 192
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "task-baseline-0",
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:32:25.935Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-id",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "id-owner"
+            },
+            "createdAt": "2026-11-18T04:32:25.942Z",
+            "updatedAt": "2026-11-18T04:32:25.942Z",
+            "archived": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "name": "ID not matched; one exact same name is accepted",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "task",
+        "companyId": "name-owned",
+        "ownerId": "name-owner",
+        "matchedBy": "name"
+      },
+      "actual": {
+        "route": "task",
+        "companyId": "name-owned",
+        "ownerId": "name-owner",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "entity-acme"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 1,
+        "results": [
+          {
+            "id": "name-owned",
+            "properties": {
+              "name": "Acme",
+              "domain": "name-owned.example",
+              "hubspot_owner_id": "name-owner",
+              "evinor_entity_id": "different-entity"
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 2,
+      "switchOutput": [
+        1,
+        0,
+        0
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Add timeline note",
+        "Task the owner"
+      ],
+      "taskPairedItem": {
+        "item": 0
+      },
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/baseline/1/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "entity-acme"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 1,
+            "results": [
+              {
+                "id": "name-owned",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "name-owned.example",
+                  "hubspot_owner_id": "name-owner",
+                  "evinor_entity_id": "different-entity"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/1/crm/v3/objects/notes",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:32:33.325Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-name</p>"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "name-owned"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 190
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "note-baseline-1",
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:32:33.325Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-name</p>"
+            },
+            "createdAt": "2026-11-18T04:32:33.328Z",
+            "updatedAt": "2026-11-18T04:32:33.328Z",
+            "archived": false
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/1/crm/v3/objects/tasks",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:32:33.338Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-name",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "name-owner"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "name-owned"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 192
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "task-baseline-1",
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:32:33.338Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-name",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "name-owner"
+            },
+            "createdAt": "2026-11-18T04:32:33.342Z",
+            "updatedAt": "2026-11-18T04:32:33.342Z",
+            "archived": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "name": "No results -> review",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": ""
+      },
+      "actual": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": "",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "entity-acme"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 0,
+        "results": []
+      },
+      "hubspotWriteCount": 0,
+      "switchOutput": [
+        0,
+        0,
+        1
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Post to review channel"
+      ],
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/baseline/2/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "entity-acme"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 0,
+            "results": []
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/2/receipts/review",
+          "body": {
+            "channel": "#evinor-review",
+            "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* No HubSpot company matched \"Acme\"\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-none_"
+          },
+          "response": {
+            "id": "receipt-baseline-2",
+            "received": {
+              "channel": "#evinor-review",
+              "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* No HubSpot company matched \"Acme\"\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-none_"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "name": "Two same-name companies -> review",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": ""
+      },
+      "actual": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": "",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "entity-acme"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 2,
+        "results": [
+          {
+            "id": "dup-1",
+            "properties": {
+              "name": "Acme",
+              "domain": "dup-1.example",
+              "hubspot_owner_id": "owner-17",
+              "evinor_entity_id": ""
+            }
+          },
+          {
+            "id": "dup-2",
+            "properties": {
+              "name": "Acme",
+              "domain": "dup-2.example",
+              "hubspot_owner_id": "owner-17",
+              "evinor_entity_id": ""
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 0,
+      "switchOutput": [
+        0,
+        0,
+        1
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Post to review channel"
+      ],
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/baseline/3/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "entity-acme"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 2,
+            "results": [
+              {
+                "id": "dup-1",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "dup-1.example",
+                  "hubspot_owner_id": "owner-17",
+                  "evinor_entity_id": ""
+                }
+              },
+              {
+                "id": "dup-2",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "dup-2.example",
+                  "hubspot_owner_id": "owner-17",
+                  "evinor_entity_id": ""
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/3/receipts/review",
+          "body": {
+            "channel": "#evinor-review",
+            "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* 2 HubSpot companies are named \"Acme\". Set evinor_entity_id = entity-acme on the right one\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-ambiguous_"
+          },
+          "response": {
+            "id": "receipt-baseline-3",
+            "received": {
+              "channel": "#evinor-review",
+              "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* 2 HubSpot companies are named \"Acme\". Set evinor_entity_id = entity-acme on the right one\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-ambiguous_"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "name": "Missing entity ID plus foreign entity property literal none -> review",
+      "nativeSuccess": true,
+      "oraclePass": false,
+      "expected": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": ""
+      },
+      "actual": {
+        "route": "task",
+        "companyId": "foreign-company",
+        "ownerId": "foreign-owner",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "none"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 1,
+        "results": [
+          {
+            "id": "foreign-company",
+            "properties": {
+              "name": "Other Company",
+              "domain": "foreign-company.example",
+              "hubspot_owner_id": "foreign-owner",
+              "evinor_entity_id": "none"
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 2,
+      "switchOutput": [
+        1,
+        0,
+        0
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Add timeline note",
+        "Task the owner"
+      ],
+      "taskPairedItem": {
+        "item": 0
+      },
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/baseline/4/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "none"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 1,
+            "results": [
+              {
+                "id": "foreign-company",
+                "properties": {
+                  "name": "Other Company",
+                  "domain": "foreign-company.example",
+                  "hubspot_owner_id": "foreign-owner",
+                  "evinor_entity_id": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/4/crm/v3/objects/notes",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:32:56.215Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-missing-entity</p>"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "foreign-company"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 190
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "note-baseline-4",
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:32:56.215Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-missing-entity</p>"
+            },
+            "createdAt": "2026-11-18T04:32:56.217Z",
+            "updatedAt": "2026-11-18T04:32:56.217Z",
+            "archived": false
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/4/crm/v3/objects/tasks",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:32:56.230Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-missing-entity",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "foreign-owner"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "foreign-company"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 192
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "task-baseline-4",
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:32:56.230Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-missing-entity",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "foreign-owner"
+            },
+            "createdAt": "2026-11-18T04:32:56.235Z",
+            "updatedAt": "2026-11-18T04:32:56.235Z",
+            "archived": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "name": "Missing entity ID; one actual same name is accepted",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "task",
+        "companyId": "same-name-company",
+        "ownerId": "same-name-owner",
+        "matchedBy": "name"
+      },
+      "actual": {
+        "route": "task",
+        "companyId": "same-name-company",
+        "ownerId": "same-name-owner",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "none"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 1,
+        "results": [
+          {
+            "id": "same-name-company",
+            "properties": {
+              "name": "Acme",
+              "domain": "same-name-company.example",
+              "hubspot_owner_id": "same-name-owner",
+              "evinor_entity_id": ""
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 2,
+      "switchOutput": [
+        1,
+        0,
+        0
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Add timeline note",
+        "Task the owner"
+      ],
+      "taskPairedItem": {
+        "item": 0
+      },
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/baseline/5/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "none"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 1,
+            "results": [
+              {
+                "id": "same-name-company",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "same-name-company.example",
+                  "hubspot_owner_id": "same-name-owner",
+                  "evinor_entity_id": ""
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/5/crm/v3/objects/notes",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:33:04.017Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-missing-entity</p>"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "same-name-company"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 190
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "note-baseline-5",
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:33:04.017Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-missing-entity</p>"
+            },
+            "createdAt": "2026-11-18T04:33:04.020Z",
+            "updatedAt": "2026-11-18T04:33:04.020Z",
+            "archived": false
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/baseline/5/crm/v3/objects/tasks",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:33:04.035Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-missing-entity",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "same-name-owner"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "same-name-company"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 192
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "task-baseline-5",
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:33:04.035Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-missing-entity",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "same-name-owner"
+            },
+            "createdAt": "2026-11-18T04:33:04.039Z",
+            "updatedAt": "2026-11-18T04:33:04.039Z",
+            "archived": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "fixed",
+      "name": "ID match wins over same-name other company",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "task",
+        "companyId": "id-owned",
+        "ownerId": "id-owner",
+        "matchedBy": "evinor_entity_id"
+      },
+      "actual": {
+        "route": "task",
+        "companyId": "id-owned",
+        "ownerId": "id-owner",
+        "matchedBy": "evinor_entity_id"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "entity-acme"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 2,
+        "results": [
+          {
+            "id": "name-only",
+            "properties": {
+              "name": "Acme",
+              "domain": "name-only.example",
+              "hubspot_owner_id": "owner-17",
+              "evinor_entity_id": "different-entity"
+            }
+          },
+          {
+            "id": "id-owned",
+            "properties": {
+              "name": "Acme Holdings",
+              "domain": "id-owned.example",
+              "hubspot_owner_id": "id-owner",
+              "evinor_entity_id": "entity-acme"
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 2,
+      "switchOutput": [
+        1,
+        0,
+        0
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Add timeline note",
+        "Task the owner"
+      ],
+      "taskPairedItem": {
+        "item": 0
+      },
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/fixed/0/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "entity-acme"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 2,
+            "results": [
+              {
+                "id": "name-only",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "name-only.example",
+                  "hubspot_owner_id": "owner-17",
+                  "evinor_entity_id": "different-entity"
+                }
+              },
+              {
+                "id": "id-owned",
+                "properties": {
+                  "name": "Acme Holdings",
+                  "domain": "id-owned.example",
+                  "hubspot_owner_id": "id-owner",
+                  "evinor_entity_id": "entity-acme"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/0/crm/v3/objects/notes",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:33:11.768Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-id</p>"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "id-owned"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 190
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "note-fixed-0",
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:33:11.768Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-id</p>"
+            },
+            "createdAt": "2026-11-18T04:33:11.778Z",
+            "updatedAt": "2026-11-18T04:33:11.778Z",
+            "archived": false
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/0/crm/v3/objects/tasks",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:33:11.790Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-id",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "id-owner"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "id-owned"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 192
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "task-fixed-0",
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:33:11.790Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-id",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "id-owner"
+            },
+            "createdAt": "2026-11-18T04:33:11.794Z",
+            "updatedAt": "2026-11-18T04:33:11.794Z",
+            "archived": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "fixed",
+      "name": "ID not matched; one exact same name is accepted",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "task",
+        "companyId": "name-owned",
+        "ownerId": "name-owner",
+        "matchedBy": "name"
+      },
+      "actual": {
+        "route": "task",
+        "companyId": "name-owned",
+        "ownerId": "name-owner",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "entity-acme"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 1,
+        "results": [
+          {
+            "id": "name-owned",
+            "properties": {
+              "name": "Acme",
+              "domain": "name-owned.example",
+              "hubspot_owner_id": "name-owner",
+              "evinor_entity_id": "different-entity"
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 2,
+      "switchOutput": [
+        1,
+        0,
+        0
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Add timeline note",
+        "Task the owner"
+      ],
+      "taskPairedItem": {
+        "item": 0
+      },
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/fixed/1/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "entity-acme"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 1,
+            "results": [
+              {
+                "id": "name-owned",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "name-owned.example",
+                  "hubspot_owner_id": "name-owner",
+                  "evinor_entity_id": "different-entity"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/1/crm/v3/objects/notes",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:33:19.087Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-name</p>"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "name-owned"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 190
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "note-fixed-1",
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:33:19.087Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-name</p>"
+            },
+            "createdAt": "2026-11-18T04:33:19.097Z",
+            "updatedAt": "2026-11-18T04:33:19.097Z",
+            "archived": false
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/1/crm/v3/objects/tasks",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:33:19.107Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-name",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "name-owner"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "name-owned"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 192
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "task-fixed-1",
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:33:19.107Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-name",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "name-owner"
+            },
+            "createdAt": "2026-11-18T04:33:19.111Z",
+            "updatedAt": "2026-11-18T04:33:19.111Z",
+            "archived": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "fixed",
+      "name": "No results -> review",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": ""
+      },
+      "actual": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": "",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "entity-acme"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 0,
+        "results": []
+      },
+      "hubspotWriteCount": 0,
+      "switchOutput": [
+        0,
+        0,
+        1
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Post to review channel"
+      ],
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/fixed/2/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "entity-acme"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 0,
+            "results": []
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/2/receipts/review",
+          "body": {
+            "channel": "#evinor-review",
+            "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* No HubSpot company matched \"Acme\"\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-none_"
+          },
+          "response": {
+            "id": "receipt-fixed-2",
+            "received": {
+              "channel": "#evinor-review",
+              "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* No HubSpot company matched \"Acme\"\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-none_"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "variant": "fixed",
+      "name": "Two same-name companies -> review",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": ""
+      },
+      "actual": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": "",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "evinor_entity_id",
+                "operator": "EQ",
+                "value": "entity-acme"
+              }
+            ]
+          },
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 2,
+        "results": [
+          {
+            "id": "dup-1",
+            "properties": {
+              "name": "Acme",
+              "domain": "dup-1.example",
+              "hubspot_owner_id": "owner-17",
+              "evinor_entity_id": ""
+            }
+          },
+          {
+            "id": "dup-2",
+            "properties": {
+              "name": "Acme",
+              "domain": "dup-2.example",
+              "hubspot_owner_id": "owner-17",
+              "evinor_entity_id": ""
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 0,
+      "switchOutput": [
+        0,
+        0,
+        1
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Post to review channel"
+      ],
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/fixed/3/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "evinor_entity_id",
+                    "operator": "EQ",
+                    "value": "entity-acme"
+                  }
+                ]
+              },
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 2,
+            "results": [
+              {
+                "id": "dup-1",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "dup-1.example",
+                  "hubspot_owner_id": "owner-17",
+                  "evinor_entity_id": ""
+                }
+              },
+              {
+                "id": "dup-2",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "dup-2.example",
+                  "hubspot_owner_id": "owner-17",
+                  "evinor_entity_id": ""
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/3/receipts/review",
+          "body": {
+            "channel": "#evinor-review",
+            "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* 2 HubSpot companies are named \"Acme\". Set evinor_entity_id = entity-acme on the right one\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-ambiguous_"
+          },
+          "response": {
+            "id": "receipt-fixed-3",
+            "received": {
+              "channel": "#evinor-review",
+              "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* 2 HubSpot companies are named \"Acme\". Set evinor_entity_id = entity-acme on the right one\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-ambiguous_"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "variant": "fixed",
+      "name": "Missing entity ID plus foreign entity property literal none -> review",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": ""
+      },
+      "actual": {
+        "route": "review",
+        "companyId": "",
+        "ownerId": "",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 0,
+        "results": []
+      },
+      "hubspotWriteCount": 0,
+      "switchOutput": [
+        0,
+        0,
+        1
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Post to review channel"
+      ],
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/fixed/4/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 0,
+            "results": []
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/4/receipts/review",
+          "body": {
+            "channel": "#evinor-review",
+            "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* No HubSpot company matched \"Acme\"\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-missing-entity_"
+          },
+          "response": {
+            "id": "receipt-fixed-4",
+            "received": {
+              "channel": "#evinor-review",
+              "text": "*Needs a person* (HIGH)\nAcme raised $12 million.\n*Why:* No HubSpot company matched \"Acme\"\n*Outlets:* unnamed · 2 reports · source: n/a\n_Evinor event match-missing-entity_"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "variant": "fixed",
+      "name": "Missing entity ID; one actual same name is accepted",
+      "nativeSuccess": true,
+      "oraclePass": true,
+      "expected": {
+        "route": "task",
+        "companyId": "same-name-company",
+        "ownerId": "same-name-owner",
+        "matchedBy": "name"
+      },
+      "actual": {
+        "route": "task",
+        "companyId": "same-name-company",
+        "ownerId": "same-name-owner",
+        "matchedBy": "name"
+      },
+      "searchBody": {
+        "filterGroups": [
+          {
+            "filters": [
+              {
+                "propertyName": "name",
+                "operator": "EQ",
+                "value": "Acme"
+              }
+            ]
+          }
+        ],
+        "properties": [
+          "name",
+          "domain",
+          "hubspot_owner_id",
+          "evinor_entity_id"
+        ],
+        "limit": 10
+      },
+      "searchResponse": {
+        "total": 1,
+        "results": [
+          {
+            "id": "same-name-company",
+            "properties": {
+              "name": "Acme",
+              "domain": "same-name-company.example",
+              "hubspot_owner_id": "same-name-owner",
+              "evinor_entity_id": ""
+            }
+          }
+        ]
+      },
+      "hubspotWriteCount": 2,
+      "switchOutput": [
+        1,
+        0,
+        0
+      ],
+      "runOrder": [
+        "Native Manual",
+        "Fixed raw Evinor input",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Route",
+        "Add timeline note",
+        "Task the owner"
+      ],
+      "taskPairedItem": {
+        "item": 0
+      },
+      "http_requests": [
+        {
+          "method": "POST",
+          "url": "/case/fixed/5/crm/v3/objects/companies/search",
+          "body": {
+            "filterGroups": [
+              {
+                "filters": [
+                  {
+                    "propertyName": "name",
+                    "operator": "EQ",
+                    "value": "Acme"
+                  }
+                ]
+              }
+            ],
+            "properties": [
+              "name",
+              "domain",
+              "hubspot_owner_id",
+              "evinor_entity_id"
+            ],
+            "limit": 10
+          },
+          "response": {
+            "total": 1,
+            "results": [
+              {
+                "id": "same-name-company",
+                "properties": {
+                  "name": "Acme",
+                  "domain": "same-name-company.example",
+                  "hubspot_owner_id": "same-name-owner",
+                  "evinor_entity_id": ""
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/5/crm/v3/objects/notes",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:33:48.688Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-missing-entity</p>"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "same-name-company"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 190
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "note-fixed-5",
+            "properties": {
+              "hs_timestamp": "2026-11-18T04:33:48.688Z",
+              "hs_note_body": "<p><strong>Acme raised $12 million.</strong></p><p>Reported by: unnamed outlets (2 reports)<br>Evinor event: match-missing-entity</p>"
+            },
+            "createdAt": "2026-11-18T04:33:48.698Z",
+            "updatedAt": "2026-11-18T04:33:48.698Z",
+            "archived": false
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/case/fixed/5/crm/v3/objects/tasks",
+          "body": {
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:33:48.709Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-missing-entity",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "same-name-owner"
+            },
+            "associations": [
+              {
+                "to": {
+                  "id": "same-name-company"
+                },
+                "types": [
+                  {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 192
+                  }
+                ]
+              }
+            ]
+          },
+          "response": {
+            "id": "task-fixed-5",
+            "properties": {
+              "hs_timestamp": "2026-11-20T04:33:48.709Z",
+              "hs_task_subject": "Funding: Acme",
+              "hs_task_body": "Acme raised $12 million.\nReported by: unnamed outlets (2 reports)\nEvinor event: match-missing-entity",
+              "hs_task_status": "NOT_STARTED",
+              "hs_task_priority": "MEDIUM",
+              "hubspot_owner_id": "same-name-owner"
+            },
+            "createdAt": "2026-11-18T04:33:48.713Z",
+            "updatedAt": "2026-11-18T04:33:48.713Z",
+            "archived": false
+          }
+        }
+      ]
+    }
+  ],
+  "editor_cases": [
+    {
+      "variant": "original",
+      "exitCode": 1,
+      "oracleExecuted": true,
+      "error": "n8n-check: Stable route output: output 0 differs. Expected [{\"route\":\"review\",\"companyId\":\"\",\"ownerId\":\"\"}]; got [{\"route\":\"task\",\"companyId\":\"foreign-company\",\"ownerId\":\"foreign-owner\"}] [line 26]",
+      "runOrder": [
+        "n8n-check start",
+        "Missing-ID Evinor event",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Stable route output",
+        "Check expected output"
+      ]
+    },
+    {
+      "variant": "fixed",
+      "exitCode": 0,
+      "oracleExecuted": true,
+      "runOrder": [
+        "n8n-check start",
+        "Missing-ID Evinor event",
+        "Normalize event",
+        "HIGH confidence + company?",
+        "Find HubSpot company",
+        "Resolve CRM match",
+        "Stable route output",
+        "Check expected output"
+      ]
+    }
+  ]
+}
