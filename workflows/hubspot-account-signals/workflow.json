@@ -316,7 +316,7 @@
           "mode": "name",
           "value": "#evinor-review"
         },
-        "text": "=*Needs a person* ({{ $json.band }}){{ $json.isTest ? ' [test delivery]' : '' }}\n{{ $json.sentence }}\n*Why:* {{ $json.reviewReason }}\n*Outlets:* {{ $json.outlets || 'unnamed' }} · {{ $json.reportCount }} reports · source: {{ $json.sourceKind || 'n/a' }}\n_Evinor event {{ $json.eventId }}_",
+        "text": "=*Needs a person* ({{ $json.band }}){{ $json.isTest ? ' [test delivery]' : '' }}\n{{ $json.sentence }}\n*Why:* {{ $json.reviewReason }}\n*Evinor entity ID:* {{ $json.entityId || 'unavailable' }}\n*Outlets:* {{ $json.outlets || 'unnamed' }} · {{ $json.reportCount }} reports · source: {{ $json.sourceKind || 'n/a' }}\n_Evinor event {{ $json.eventId }}_",
         "otherOptions": {}
       },
       "id": "30be5482-bb6d-415b-95bd-e8d9f78d3b4d",
