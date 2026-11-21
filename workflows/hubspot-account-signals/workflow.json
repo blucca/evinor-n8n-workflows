@@ -111,7 +111,7 @@
         "options": {},
         "method": "POST",
         "url": "https://api.hubapi.com/crm/v3/objects/companies/search",
-        "jsonBody": "={{ JSON.stringify({\n  filterGroups: [\n    { filters: [{ propertyName: 'evinor_entity_id', operator: 'EQ', value: $json.entityId || 'none' }] },\n    { filters: [{ propertyName: 'name', operator: 'EQ', value: $json.company }] }\n  ],\n  properties: ['name', 'domain', 'hubspot_owner_id', 'evinor_entity_id'],\n  limit: 10\n}) }}"
+        "jsonBody": "={{ JSON.stringify({\n  filterGroups: [\n    ...($json.entityId ? [{ filters: [{ propertyName: 'evinor_entity_id', operator: 'EQ', value: $json.entityId }] }] : []),\n    { filters: [{ propertyName: 'name', operator: 'EQ', value: $json.company }] }\n  ],\n  properties: ['name', 'domain', 'hubspot_owner_id', 'evinor_entity_id'],\n  limit: 10\n}) }}"
       },
       "id": "175f8320-2d11-4e7c-ad29-836662c669a0",
       "name": "Find HubSpot company",
